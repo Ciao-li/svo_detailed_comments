@@ -14,6 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+/*
+** 特征检测
+*/
 #ifndef SVO_FEATURE_DETECTION_H_
 #define SVO_FEATURE_DETECTION_H_
 
@@ -23,16 +26,18 @@
 namespace svo {
 
 /// Implementation of various feature detectors.
+// 各种特征检测器的实现
 namespace feature_detection {
 
 /// Temporary container used for corner detection. Features are initialized from these.
+// 用于角落检测的临时容器。特征从这些开始初始化。
 struct Corner
 {
-  int x;        //!< x-coordinate of corner in the image.
-  int y;        //!< y-coordinate of corner in the image.
-  int level;    //!< pyramid level of the corner.
-  float score;  //!< shi-tomasi score of the corner.
-  float angle;  //!< for gradient-features: dominant gradient angle.
+  int x;        //!< x-coordinate of corner in the image. 角点在图像中的x坐标
+  int y;        //!< y-coordinate of corner in the image. 角点在图像中的y坐标
+  int level;    //!< pyramid level of the corner. 角点所在的金字塔层数
+  float score;  //!< shi-tomasi score of the corner. 角点的shi-tomasi得分
+  float angle;  //!< for gradient-features: dominant gradient angle. 主要梯度的方向角度
   Corner(int x, int y, float score, int level, float angle) :
     x(x), y(y), level(level), score(score), angle(angle)
   {}
@@ -40,6 +45,7 @@ struct Corner
 typedef vector<Corner> Corners;
 
 /// All detectors should derive from this abstract class.
+// 检测器抽象类
 class AbstractDetector
 {
 public:
@@ -58,19 +64,21 @@ public:
       Features& fts) = 0;
 
   /// Flag the grid cell as occupied
+  // 设置网格cell为已占用
   void setGridOccpuancy(const Vector2d& px);
 
   /// Set grid cells of existing features as occupied
+  // 将现有特征的网格单元设置为已占用
   void setExistingFeatures(const Features& fts);
 
 protected:
 
-  static const int border_ = 8; //!< no feature should be within 8px of border.
+  static const int border_ = 8; //!< no feature should be within 8px of border. 
   const int cell_size_;
   const int n_pyr_levels_;
   const int grid_n_cols_;
   const int grid_n_rows_;
-  vector<bool> grid_occupancy_;
+  vector<bool> grid_occupancy_; // 图像网格是否被占用的标志
 
   void resetGrid();
 
@@ -83,6 +91,7 @@ protected:
 typedef boost::shared_ptr<AbstractDetector> DetectorPtr;
 
 /// FAST detector by Edward Rosten.
+// FAST特征检测器
 class FastDetector : public AbstractDetector
 {
 public:

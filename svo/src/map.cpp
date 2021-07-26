@@ -1,19 +1,7 @@
-// This file is part of SVO - Semi-direct Visual Odometry.
-//
-// Copyright (C) 2014 Christian Forster <forster at ifi dot uzh dot ch>
-// (Robotics and Perception Group, University of Zurich, Switzerland).
-//
-// SVO is free software: you can redistribute it and/or modify it under the
-// terms of the GNU General Public License as published by the Free Software
-// Foundation, either version 3 of the License, or any later version.
-//
-// SVO is distributed in the hope that it will be useful, but WITHOUT ANY
-// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-// FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+/*
+** 地图的生成与管理
+*/
 #include <set>
 #include <svo/map.h>
 #include <svo/point.h>
@@ -38,11 +26,19 @@ void Map::reset()
   emptyTrash();
 }
 
+/*
+** parameter
+* frame: 输入帧
+* 在reprojector.cpp文件中的bool Reprojector::reprojectCell(Cell& cell, FramePtr frame)函数中调用
+** function: 
+*/
 bool Map::safeDeleteFrame(FramePtr frame)
 {
   bool found = false;
+  // 在所有关键帧中搜寻该帧
   for(auto it=keyframes_.begin(), ite=keyframes_.end(); it!=ite; ++it)
   {
+	  // 若是输入帧
     if(*it == frame)
     {
       std::for_each((*it)->fts_.begin(), (*it)->fts_.end(), [&](Feature* ftr){
@@ -63,6 +59,14 @@ bool Map::safeDeleteFrame(FramePtr frame)
   return false;
 }
 
+/*
+** parameter
+* frame: 输入帧
+* ftr: 输入帧中的特征点
+* 在本文件中的bool Map::safeDeleteFrame(FramePtr frame)函数中调用
+* 在bundle_adjustment.cpp文件中的void localBA()函数中调用
+** function: 删除点和帧之间的references（联系？？？）
+*/
 void Map::removePtFrameRef(Frame* frame, Feature* ftr)
 {
   if(ftr->point == NULL)
@@ -79,9 +83,16 @@ void Map::removePtFrameRef(Frame* frame, Feature* ftr)
   frame->removeKeyPoint(ftr); // Check if mp was keyMp in keyframe
 }
 
+/*
+** parameter
+* pt: 地图点
+* 在reprojector.cpp文件中的bool Reprojector::reprojectCell(Cell& cell, FramePtr frame)函数中调用
+** function: 删除地图中的点并删除关键帧中对该点的所有references
+*/
 void Map::safeDeletePoint(Point* pt)
 {
   // Delete references to mappoints in all keyframes
+  // 删除所有关键帧中对地图点的references
   std::for_each(pt->obs_.begin(), pt->obs_.end(), [&](Feature* ftr){
     ftr->point=NULL;
     ftr->frame->removeKeyPoint(ftr);
@@ -89,20 +100,41 @@ void Map::safeDeletePoint(Point* pt)
   pt->obs_.clear();
 
   // Delete mappoint
+  // 删除地图点
   deletePoint(pt);
 }
 
+/*
+** parameter
+* pt: 待删除的地图点
+* 在本文件中的void Map::safeDeletePoint(Point* pt)函数中调用
+** function: 删除地图点
+*/
 void Map::deletePoint(Point* pt)
 {
+	// 如果地图点的数据类型是TYPE_DELETED，则将该点存入trash_points_变量中，该变量专门用于存放要删除的点
   pt->type_ = Point::TYPE_DELETED;
   trash_points_.push_back(pt);
 }
 
+/*
+** parameter
+* new_keyframe：输入值，检测到的关键帧
+* 在frame_handler_mono.cpp文件中的FrameHandlerMono::UpdateResult FrameHandlerMono::processFirstFrame()函数中调用
+** function：将检测到的关键帧存入keyframes_中
+*/
 void Map::addKeyframe(FramePtr new_keyframe)
 {
   keyframes_.push_back(new_keyframe);
 }
 
+/*
+** parameters
+* frame: 输入的帧
+* close_kfs: 输出参数，与输入帧具有共视关系的其他关键帧
+* 在reprojector.cpp文件中的void Reprojector::reprojectMap()函数中调用
+** function: 给定一个帧，返回所有与它具有共视关系的关键帧
+*/
 void Map::getCloseKeyframes(
     const FramePtr& frame,
     std::list< std::pair<FramePtr,double> >& close_kfs) const
@@ -110,11 +142,13 @@ void Map::getCloseKeyframes(
   for(auto kf : keyframes_)
   {
     // check if kf has overlaping field of view with frame, use therefore KeyPoints
+    // 检查关键帧与参考帧是否有重叠区域
     for(auto keypoint : kf->key_pts_)
     {
       if(keypoint == nullptr)
         continue;
 
+	  // isVisible()用于检查某3d点是否能在图像中被观察到
       if(frame->isVisible(keypoint->point->pos_))
       {
         close_kfs.push_back(
@@ -217,9 +251,17 @@ void MapPointCandidates::newCandidatePoint(Point* point, double depth_sigma2)
   candidates_.push_back(PointCandidate(point, point->obs_.front()));
 }
 
+/*
+** parameter
+* frame: 输入值，当前帧
+* 在frame_handler_mono.cpp文件中的FrameHandlerBase::UpdateResult FrameHandlerMono::processFrame()函数中调用
+** function: 将特征点添加到帧，并从链表中删除候选特征
+*/
 void MapPointCandidates::addCandidatePointToFrame(FramePtr frame)
 {
+	// 线程锁
   boost::unique_lock<boost::mutex> lock(mut_);
+  // 遍历候选点
   PointCandidateList::iterator it=candidates_.begin();
   while(it != candidates_.end())
   {
@@ -228,6 +270,7 @@ void MapPointCandidates::addCandidatePointToFrame(FramePtr frame)
       // insert feature in the frame
       it->first->type_ = Point::TYPE_UNKNOWN;
       it->first->n_failed_reproj_ = 0;
+	  // 添加特征点至特征点链表中
       it->second->frame->addFeature(it->second);
       it = candidates_.erase(it);
     }
@@ -236,19 +279,33 @@ void MapPointCandidates::addCandidatePointToFrame(FramePtr frame)
   }
 }
 
+/*
+** parameter
+* point: 地图点
+* 在reprojrctor.cpp文件中的bool Reprojector::reprojectCell(Cell& cell, FramePtr frame)函数中调用
+** function: 遍历，删除候选点
+*/
 bool MapPointCandidates::deleteCandidatePoint(Point* point)
 {
+	// 线程锁
   boost::unique_lock<boost::mutex> lock(mut_);
+  /*
+  typedef pair<Point*, Feature*> PointCandidate;
+  typedef list<PointCandidate> PointCandidateList;
+  PointCandidateList candidates_;
+  所以candidates_本质上还是一系列pair<Point*, Feature*>的链表
+  */
   for(auto it=candidates_.begin(), ite=candidates_.end(); it!=ite; ++it)
   {
+	  // 判断是否为要删除的点
     if(it->first == point)
     {
-      deleteCandidate(*it);
+      deleteCandidate(*it);// 函数具体功能参见函数定义
       candidates_.erase(it);
-      return true;
+      return true;// 返回true表示已经成功删除
     }
   }
-  return false;
+  return false;// 返回false表示没有要删除的地图点
 }
 
 void MapPointCandidates::removeFrameCandidates(FramePtr frame)
@@ -277,12 +334,27 @@ void MapPointCandidates::reset()
   candidates_.clear();
 }
 
+/*
+** parameter
+* c: 输入值应该是地图点及其对应的特征点
+* 在reprojector.cpp文件中的void Reprojector::reprojectMap()函数中调用
+* 在本文件中的bool MapPointCandidates::deleteCandidatePoint(Point* point)函数中调用
+** function: 移除待删除的候选点，注意c.first和c.second不同操作
+*/
 void MapPointCandidates::deleteCandidate(PointCandidate& c)
 {
   // camera-rig: another frame might still be pointing to the candidate point
   // therefore, we can't delete it right now.
+  /*
+  c的数据类型是typedef pair<Point*, Feature*> PointCandidate;所以应该是地图点及其对应的特征点的pair
+  c.first是Point* 代表地图点，c.second是Feature* 代表特征点
+  由于其他帧中可能有该地图点的投影点，因此c.second中的值不能立刻删除，只能将c.second的指向删除并写为NULL
+  注意delete c.second;这里的delete和上面说的删除不是一个意思
+  */
   delete c.second; c.second=NULL;
+  // 将删除的候选点的标志置为TYPE_DELETED
   c.first->type_ = Point::TYPE_DELETED;
+  // 然后把待删除的候选点放入垃圾桶，辣鸡！！！
   trash_points_.push_back(c.first);
 }
 

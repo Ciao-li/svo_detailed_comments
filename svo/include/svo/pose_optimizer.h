@@ -14,6 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+/*
+** 图优化（光束法平差最优化重投影误差）
+*/
 #ifndef SVO_POSE_OPTIMIZER_H_
 #define SVO_POSE_OPTIMIZER_H_
 
@@ -32,6 +35,7 @@ typedef Matrix<double,6,1> Vector6d;
 class Point;
 
 /// Motion-only bundle adjustment. Minimize the reprojection error of a single frame.
+// 
 namespace pose_optimizer {
 
 void optimizeGaussNewton(

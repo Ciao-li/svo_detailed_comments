@@ -1,19 +1,7 @@
-// This file is part of SVO - Semi-direct Visual Odometry.
-//
-// Copyright (C) 2014 Christian Forster <forster at ifi dot uzh dot ch>
-// (Robotics and Perception Group, University of Zurich, Switzerland).
-//
-// SVO is free software: you can redistribute it and/or modify it under the
-// terms of the GNU General Public License as published by the Free Software
-// Foundation, either version 3 of the License, or any later version.
-//
-// SVO is distributed in the hope that it will be useful, but WITHOUT ANY
-// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-// FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+/*
+ ** 直接法优化位姿（最小化光度误差）
+*/
 #ifndef SVO_SPARSE_IMG_ALIGN_H_
 #define SVO_SPARSE_IMG_ALIGN_H_
 
@@ -39,11 +27,14 @@ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   cv::Mat resimg_;
-
+  
+  /*
+  * 在frame_handler_mono.cpp文件中的FrameHandlerBase::UpdateResult FrameHandlerMono::processFrame()函数中初始化
+  */
   SparseImgAlign(
       int n_levels,
       int min_level,
-      int n_iter,
+      int n_iter, // 迭代次数
       Method method,
       bool display,
       bool verbose);
@@ -57,18 +48,18 @@ public:
   Matrix<double, 6, 6> getFisherInformation();
 
 protected:
-  FramePtr ref_frame_;            //!< reference frame, has depth for gradient pixels.
-  FramePtr cur_frame_;            //!< only the image is known!
-  int level_;                     //!< current pyramid level on which the optimization runs.
-  bool display_;                  //!< display residual image.
-  int max_level_;                 //!< coarsest pyramid level for the alignment.
-  int min_level_;                 //!< finest pyramid level for the alignment.
+  FramePtr ref_frame_;            //!< reference frame, has depth for gradient pixels. 参考帧
+  FramePtr cur_frame_;            //!< only the image is known!当前帧？？？ 
+  int level_;                     //!< current pyramid level on which the optimization runs.当前优化所在的金字塔层数
+  bool display_;                  //!< display residual image.是否显示残差图像
+  int max_level_;                 //!< coarsest pyramid level for the alignment.图像对齐（匹配）的最大金字塔层数，粗对齐
+  int min_level_;                 //!< finest pyramid level for the alignment.图像对齐（匹配）的最小金字塔层数，精对齐
 
   // cache:
-  Matrix<double, 6, Dynamic, ColMajor> jacobian_cache_;
+  Matrix<double, 6, Dynamic, ColMajor> jacobian_cache_; // double:数值类型，6:行数，Dynamic:动态矩阵，其大小根据运算决定，ColMajor:按列存储
   bool have_ref_patch_cache_;
   cv::Mat ref_patch_cache_;
-  std::vector<bool> visible_fts_;
+  std::vector<bool> visible_fts_; // 
 
   void precomputeReferencePatches();
   virtual double computeResiduals(const SE3& model, bool linearize_system, bool compute_weight_scale = false);

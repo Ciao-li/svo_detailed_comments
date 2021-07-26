@@ -1,19 +1,7 @@
-// This file is part of SVO - Semi-direct Visual Odometry.
-//
-// Copyright (C) 2014 Christian Forster <forster at ifi dot uzh dot ch>
-// (Robotics and Perception Group, University of Zurich, Switzerland).
-//
-// SVO is free software: you can redistribute it and/or modify it under the
-// terms of the GNU General Public License as published by the Free Software
-// Foundation, either version 3 of the License, or any later version.
-//
-// SVO is distributed in the hope that it will be useful, but WITHOUT ANY
-// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-// FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+/*
+** 3D点的定义
+*/
 #include <stdexcept>
 #include <vikit/math_utils.h>
 #include <svo/point.h>
@@ -24,6 +12,9 @@ namespace svo {
 
 int Point::point_counter_ = 0;
 
+/*
+* 在initilization.cpp文件中的InitResult KltHomographyInit::addSecondFrame(FramePtr frame_cur)函数中初始化
+*/
 Point::Point(const Vector3d& pos) :
   id_(point_counter_++),
   pos_(pos),
@@ -57,9 +48,18 @@ Point::Point(const Vector3d& pos, Feature* ftr) :
 Point::~Point()
 {}
 
+/*
+** parameter
+* ftr: 特征点
+* 在initilization.cpp文件中的InitResult KltHomographyInit::addSecondFrame(FramePtr frame_cur)函数中调用
+* 在frame_handler_mono.cpp文件中的FrameHandlerBase::UpdateResult FrameHandlerMono::processFrame()函数中调用
+** function: 向帧中添加特征点
+*/
 void Point::addFrameRef(Feature* ftr)
 {
+  // obs_:可以观察到此特征点的帧的链表
   obs_.push_front(ftr);
+  // 观测点数++
   ++n_obs_;
 }
 
@@ -94,14 +94,23 @@ void Point::initNormal()
   normal_set_ = true;
 }
 
+/*
+** parameters
+* framepos: 帧在世界坐标系下的坐标
+* ftr: 特征点
+* 在matcher.cpp文件中的bool Matcher::findMatchDirect()函数中调用
+** function: 筛选出在每个特征点60度观察范围内的特征点？？？
+*/
 bool Point::getCloseViewObs(const Vector3d& framepos, Feature*& ftr) const
 {
   // TODO: get frame with same point of view AND same pyramid level!
   Vector3d obs_dir(framepos - pos_); obs_dir.normalize();
+  // obs_数据类型是list<Feature*>
   auto min_it=obs_.begin();
   double min_cos_angle = 0;
   for(auto it=obs_.begin(), ite=obs_.end(); it!=ite; ++it)
   {
+    // T_f_w_的逆矩阵的平移参数t - 世界坐标系下的3D点坐标
     Vector3d dir((*it)->frame->pos() - pos_); dir.normalize();
     double cos_angle = obs_dir.dot(dir);
     if(cos_angle > min_cos_angle)
@@ -111,11 +120,18 @@ bool Point::getCloseViewObs(const Vector3d& framepos, Feature*& ftr) const
     }
   }
   ftr = *min_it;
+  // 假定大于60度的观察角度所观测的点是无用的点
   if(min_cos_angle < 0.5) // assume that observations larger than 60° are useless
     return false;
   return true;
 }
 
+/*
+** parameter
+* n_iter: 迭代次数
+* 在frame_handler_base.cpp文件中的void FrameHandlerBase::optimizeStructure()函数中调用
+** function: 通过最小化重投影误差来优化3D点的位置信息
+*/
 void Point::optimize(const size_t n_iter)
 {
   Vector3d old_point = pos_;

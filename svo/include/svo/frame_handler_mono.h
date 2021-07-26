@@ -14,6 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+/*
+** 视觉前端原理
+*/
 #ifndef SVO_FRAME_HANDLER_H_
 #define SVO_FRAME_HANDLER_H_
 
@@ -61,16 +64,21 @@ public:
       const double timestamp);
 
 protected:
-  vk::AbstractCamera* cam_;                     //!< Camera model, can be ATAN, Pinhole or Ocam (see vikit).
-  Reprojector reprojector_;                     //!< Projects points from other keyframes into the current frame
-  FramePtr new_frame_;                          //!< Current frame.
+  vk::AbstractCamera* cam_;                     //!< Camera model, can be ATAN, Pinhole or Ocam (see vikit). 三种模型
+  Reprojector reprojector_;                     //!< Projects points from other keyframes into the current frame 其他关键帧向当前帧的投影点
+  FramePtr new_frame_;                          //!< Current frame. 当前帧
   FramePtr last_frame_;                         //!< Last frame, not necessarily a keyframe.
   set<FramePtr> core_kfs_;                      //!< Keyframes in the closer neighbourhood.
-  vector< pair<FramePtr,size_t> > overlap_kfs_; //!< All keyframes with overlapping field of view. the paired number specifies how many common mappoints are observed TODO: why vector!?
-  initialization::KltHomographyInit klt_homography_init_; //!< Used to estimate pose of the first two keyframes by estimating a homography.
+  
+  vector< pair<FramePtr,size_t> > overlap_kfs_; // 与某一帧具有共视关系的其他关键帧 size_t是值这些关键帧的序号吗？？？取前十帧那里吗？？？
+  //!< All keyframes with overlapping field of view. the paired number specifies how many common mappoints are observed TODO: why vector!?
+  initialization::KltHomographyInit klt_homography_init_; 
+  //!< Used to estimate pose of the first two keyframes by estimating a homography.通过计算单应矩阵估计头两个关键帧的相对位姿
+  
   DepthFilter* depth_filter_;                   //!< Depth estimation algorithm runs in a parallel thread and is used to initialize new 3D points.
 
   /// Initialize the visual odometry algorithm.
+  // 初始化VO
   virtual void initialize();
 
   /// Processes the first frame and sets it as a keyframe.

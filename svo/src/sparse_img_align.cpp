@@ -1,19 +1,7 @@
-// This file is part of SVO - Semi-direct Visual Odometry.
-//
-// Copyright (C) 2014 Christian Forster <forster at ifi dot uzh dot ch>
-// (Robotics and Perception Group, University of Zurich, Switzerland).
-//
-// SVO is free software: you can redistribute it and/or modify it under the
-// terms of the GNU General Public License as published by the Free Software
-// Foundation, either version 3 of the License, or any later version.
-//
-// SVO is distributed in the hope that it will be useful, but WITHOUT ANY
-// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-// FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+/*
+ ** 直接法优化位姿（最小化光度误差）
+*/
 #include <algorithm>
 #include <svo/sparse_img_align.h>
 #include <svo/frame.h>
@@ -26,6 +14,12 @@
 
 namespace svo {
 
+/*
+** parameters
+* 各参数含义参见sparse_img_align.h文件
+* 在frame_handler_mono.cpp文件中的FrameHandlerBase::UpdateResult FrameHandlerMono::processFrame()函数中初始化
+** function: SparseImgAlign构造函数初始化
+*/
 SparseImgAlign::SparseImgAlign(
     int max_level, int min_level, int n_iter,
     Method method, bool display, bool verbose) :
@@ -40,37 +34,55 @@ SparseImgAlign::SparseImgAlign(
   eps_ = 0.000001;
 }
 
+/*
+** parameters
+* ref_frame: 上一帧（参考帧）
+* cur_frame: 当前帧
+* 在frame_handler_mono.cpp文件中的FrameHandlerBase::UpdateResult FrameHandlerMono::processFrame()函数中调用
+** function: 优化参考帧到当前帧的位姿矩阵
+*/
 size_t SparseImgAlign::run(FramePtr ref_frame, FramePtr cur_frame)
 {
+  // 这里是调用initilization.cpp文件中的void KltHomographyInit::reset()函数吗？？？
   reset();
 
+  // 若参考帧中无特征点，返回0，run函数结束
   if(ref_frame->fts_.empty())
   {
     SVO_WARN_STREAM("SparseImgAlign: no features to track!");
     return 0;
   }
 
+  // 普通赋值操作
   ref_frame_ = ref_frame;
   cur_frame_ = cur_frame;
-  ref_patch_cache_ = cv::Mat(ref_frame_->fts_.size(), patch_area_, CV_32F);
-  jacobian_cache_.resize(Eigen::NoChange, ref_patch_cache_.rows*patch_area_);
-  visible_fts_.resize(ref_patch_cache_.rows, false); // TODO: should it be reset at each level?
 
+  // 创建cv::Mat对象（行数为ref_frame_->fts_.size()，列数为patch_area_（16），数值类型为CV_32F）并赋给ref_patch_cache_
+  ref_patch_cache_ = cv::Mat(ref_frame_->fts_.size(), patch_area_, CV_32F);
+  // 调用.resize函数对矩阵jacobian_cache_的大小进行初始化，行数不变（Eigen::NoChange表示不变），列数设置为ref_patch_cache_.rows * 16(16*16)
+  // jacobian_cache_定义在sparse_img_align.h中
+  jacobian_cache_.resize(Eigen::NoChange, ref_patch_cache_.rows*patch_area_);
+  // 初始化向量visible_fts_，使其长度为ref_patch_cache_.rows，值均为false
+  visible_fts_.resize(ref_patch_cache_.rows, false); // TODO: should it be reset at each level?
+  // 创建SE3型变量T_cur_from_ref（用于存储从上帧到当前帧的变换矩阵），初始化值为当前帧变换矩阵 乘以 上帧变换矩阵逆矩阵
   SE3 T_cur_from_ref(cur_frame_->T_f_w_ * ref_frame_->T_f_w_.inverse());
 
+  // for循环实现对变换矩阵T_cur_from_ref的优化，level_为金字塔层数
   for(level_=max_level_; level_>=min_level_; --level_)
   {
     mu_ = 0.1;
     jacobian_cache_.setZero();
     have_ref_patch_cache_ = false;
+	// 如果verbose_为真，就打印优化信息,调用优化函数optimize对T_cur_from_ref进行优化迭代
     if(verbose_)
       printf("\nPYRAMID LEVEL %i\n---------------\n", level_);
-    optimize(T_cur_from_ref);
+	// 它进一步调用optimizeGaossNewton函数，optimizeGaossNewton又调用precomputeReferencePatches、computeResiduals等一系列函数，贼复杂！！不看了！！！
+    optimize(T_cur_from_ref);// 这个函数不知道在哪？？？***
   }
+  // 得到优化后的当前帧变换矩阵，即用优化后的T_cur_from_ref乘以上帧的变换矩阵。
   cur_frame_->T_f_w_ = T_cur_from_ref * ref_frame_->T_f_w_;
 
-
-
+  // 返回n_meas_/patch_area_（值为16），并幅值给img_align_n_tracked
   return n_meas_/patch_area_;
 }
 

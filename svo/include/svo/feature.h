@@ -1,19 +1,7 @@
-// This file is part of SVO - Semi-direct Visual Odometry.
-//
-// Copyright (C) 2014 Christian Forster <forster at ifi dot uzh dot ch>
-// (Robotics and Perception Group, University of Zurich, Switzerland).
-//
-// SVO is free software: you can redistribute it and/or modify it under the
-// terms of the GNU General Public License as published by the Free Software
-// Foundation, either version 3 of the License, or any later version.
-//
-// SVO is distributed in the hope that it will be useful, but WITHOUT ANY
-// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-// FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+/*
+** 特征定义
+*/
 #ifndef SVO_FEATURE_H_
 #define SVO_FEATURE_H_
 
@@ -22,23 +10,29 @@
 namespace svo {
 
 /// A salient image region that is tracked across frames.
+// 用于帧间跟踪的特征点
 struct Feature
 {
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
+  // 特征点的类型（应该是指分布吧）
   enum FeatureType {
-    CORNER,
-    EDGELET
+    CORNER, // 角
+    EDGELET  // 边
   };
 
-  FeatureType type;     //!< Type can be corner or edgelet.
-  Frame* frame;         //!< Pointer to frame in which the feature was detected.
-  Vector2d px;          //!< Coordinates in pixels on pyramid level 0.
-  Vector3d f;           //!< Unit-bearing vector of the feature.
-  int level;            //!< Image pyramid level where feature was extracted.
-  Point* point;         //!< Pointer to 3D point which corresponds to the feature.
-  Vector2d grad;        //!< Dominant gradient direction for edglets, normalized.
+  FeatureType type;     //!< Type can be corner or edgelet. 表示该点的类型，在角上还是边上
+  Frame* frame;         //!< Pointer to frame in which the feature was detected. 指向检测到特征点的帧的指针
+  Vector2d px;          //!< Coordinates in pixels on pyramid level 0. 在金字塔第0层的像素坐标
+  Vector3d f;           //!< Unit-bearing vector of the feature. 特征点的单位方向向量
+  int level;            //!< Image pyramid level where feature was extracted. 特征点所在的金字塔层数
+  Point* point;         //!< Pointer to 3D point which corresponds to the feature. 指向与特征点关联的地图点的指针
+  Vector2d grad;        //!< Dominant gradient direction for edglets, normalized. 边的主要梯度方向，已归一化
 
+  /*
+  * 在reprojector.cpp文件中的bool Reprojector::reprojectCell(Cell& cell, FramePtr frame)函数中初始化
+  * 函数重载，构造函数的初始化操作
+  */
   Feature(Frame* _frame, const Vector2d& _px, int _level) :
     type(CORNER),
     frame(_frame),
@@ -59,6 +53,10 @@ struct Feature
     grad(1.0,0.0)
   {}
 
+  /*
+  * 在initilization.cpp文件中的InitResult KltHomographyInit::addSecondFrame(FramePtr frame_cur)函数中初始化
+  * 函数重载，构造函数的初始化操作
+  */
   Feature(Frame* _frame, Point* _point, const Vector2d& _px, const Vector3d& _f, int _level) :
     type(CORNER),
     frame(_frame),

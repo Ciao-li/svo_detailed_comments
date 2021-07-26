@@ -1,18 +1,3 @@
-// This file is part of SVO - Semi-direct Visual Odometry.
-//
-// Copyright (C) 2014 Christian Forster <forster at ifi dot uzh dot ch>
-// (Robotics and Perception Group, University of Zurich, Switzerland).
-//
-// SVO is free software: you can redistribute it and/or modify it under the
-// terms of the GNU General Public License as published by the Free Software
-// Foundation, either version 3 of the License, or any later version.
-//
-// SVO is distributed in the hope that it will be useful, but WITHOUT ANY
-// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-// FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdexcept>
 #include <svo/pose_optimizer.h>
@@ -25,6 +10,19 @@
 namespace svo {
 namespace pose_optimizer {
 
+/*
+** parameters
+* reproj_thresh: 重投影误差阈值
+* n_iter: 迭代次数
+* verbose: 
+* frame: 输入帧
+* estimated_scale: 输出值
+* error_init: 输出值
+* error_final: 输出值
+* num_obs: 观察点数量
+* 在文件frame_handler_mono.cpp文件中的FrameHandlerBase::UpdateResult FrameHandlerMono::processFrame()函数中调用
+** function: 调用高斯牛顿法，优化特征点的位置
+*/
 void optimizeGaussNewton(
     const double reproj_thresh,
     const size_t n_iter,
@@ -44,6 +42,7 @@ void optimizeGaussNewton(
   Vector6d b;
 
   // compute the scale of the error for robust estimation
+  // 计算估计的错误尺度
   std::vector<float> errors; errors.reserve(frame->fts_.size());
   for(auto it=frame->fts_.begin(); it!=frame->fts_.end(); ++it)
   {
@@ -74,6 +73,7 @@ void optimizeGaussNewton(
     double new_chi2(0.0);
 
     // compute residual
+	// 计算残差
     for(auto it=frame->fts_.begin(); it!=frame->fts_.end(); ++it)
     {
       if((*it)->point == NULL)
@@ -94,9 +94,11 @@ void optimizeGaussNewton(
     }
 
     // solve linear system
+	// 线性系统
     const Vector6d dT(A.ldlt().solve(b));
 
     // check if error increased
+	// 检查错误是否增加
     if((iter > 0 && new_chi2 > chi2) || (bool) std::isnan((double)dT[0]))
     {
       if(verbose)
@@ -107,6 +109,7 @@ void optimizeGaussNewton(
     }
 
     // update the model
+	// 更新模型
     SE3 T_new = SE3::exp(dT)*frame->T_f_w_;
     T_old = frame->T_f_w_;
     frame->T_f_w_ = T_new;
@@ -117,15 +120,18 @@ void optimizeGaussNewton(
                 << "\t norm(dT) = " << vk::norm_max(dT) << std::endl;
 
     // stop when converged
+	// 当残差收敛时，停止优化
     if(vk::norm_max(dT) <= EPS)
       break;
   }
 
   // Set covariance as inverse information matrix. Optimistic estimator!
+  // 
   const double pixel_variance=1.0;
   frame->Cov_ = pixel_variance*(A*std::pow(frame->cam_->errorMultiplier2(),2)).inverse();
 
   // Remove Measurements with too large reprojection error
+  // 移除过大的重投影误差的测量
   double reproj_thresh_scaled = reproj_thresh / frame->cam_->errorMultiplier2();
   size_t n_deleted_refs = 0;
   for(Features::iterator it=frame->fts_.begin(); it!=frame->fts_.end(); ++it)

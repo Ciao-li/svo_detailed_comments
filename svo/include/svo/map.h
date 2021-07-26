@@ -14,6 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+/*
+** 地图的生成与管理
+*/
 #ifndef SVO_MAP_H_
 #define SVO_MAP_H_
 
@@ -29,6 +32,7 @@ class Feature;
 class Seed;
 
 /// Container for converged 3D points that are not already assigned to two keyframes.
+// 用于尚未指定给两个关键帧的收敛三维点的容器
 class MapPointCandidates
 {
 public:
@@ -41,6 +45,8 @@ public:
 
   /// Candidate points are created from converged seeds.
   /// Until the next keyframe, these points can be used for reprojection and pose optimization.
+  // 候选点由聚合种子创建
+  // 直到下一个关键帧，这些点可以用于重投影和位姿优化
   PointCandidateList candidates_;
   list< Point* > trash_points_;
 
@@ -51,9 +57,11 @@ public:
   void newCandidatePoint(Point* point, double depth_sigma2);
 
   /// Adds the feature to the frame and deletes candidate from list.
+  // 将特征添加到帧，并从链表中删除候选特征
   void addCandidatePointToFrame(FramePtr frame);
 
   /// Remove a candidate point from the list of candidates.
+  // 从侯选点链表中删除候选点
   bool deleteCandidatePoint(Point* point);
 
   /// Remove all candidates that belong to a frame.
@@ -68,11 +76,14 @@ public:
 };
 
 /// Map object which saves all keyframes which are in a map.
+// 保存地图中所有关键帧的Map对象
 class Map : boost::noncopyable
 {
 public:
-  list< FramePtr > keyframes_;          //!< List of keyframes in the map.
-  list< Point* > trash_points_;         //!< A deleted point is moved to the trash bin. Now and then this is cleaned. One reason is that the visualizer must remove the points also.
+  list< FramePtr > keyframes_;          //!< List of keyframes in the map. 地图中关键帧的链表
+  list< Point* > trash_points_;        
+  //!< A deleted point is moved to the trash bin. Now and then this is cleaned. One reason is that the visualizer must remove the points also.
+  // 一个被删除的点被移动到垃圾箱。不时地清理一下。一个原因是可视化工具还必须删除这些点
   MapPointCandidates point_candidates_;
 
   Map();
@@ -82,6 +93,7 @@ public:
   void reset();
 
   /// Delete a point in the map and remove all references in keyframes to it.
+  // 删除地图中的点并删除关键帧中对该点的所有references
   void safeDeletePoint(Point* pt);
 
   /// Moves the point to the trash queue which is cleaned now and then.
@@ -91,12 +103,14 @@ public:
   bool safeDeleteFrame(FramePtr frame);
 
   /// Remove the references between a point and a frame.
+  // 删除点和帧之间的references
   void removePtFrameRef(Frame* frame, Feature* ftr);
 
   /// Add a new keyframe to the map.
   void addKeyframe(FramePtr new_keyframe);
 
   /// Given a frame, return all keyframes which have an overlapping field of view.
+  // 给定一个帧，返回所有与它具有共视关系的关键帧
   void getCloseKeyframes(const FramePtr& frame, list< pair<FramePtr,double> >& close_kfs) const;
 
   /// Return the keyframe which is spatially closest and has overlapping field of view.
@@ -116,6 +130,7 @@ public:
   void emptyTrash();
 
   /// Return the keyframe which was last inserted in the map.
+  // 返回邻近的最后一帧
   inline FramePtr lastKeyframe() { return keyframes_.back(); }
 
   /// Return the number of keyframes in the map

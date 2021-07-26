@@ -1,18 +1,3 @@
-// This file is part of SVO - Semi-direct Visual Odometry.
-//
-// Copyright (C) 2014 Christian Forster <forster at ifi dot uzh dot ch>
-// (Robotics and Perception Group, University of Zurich, Switzerland).
-//
-// SVO is free software: you can redistribute it and/or modify it under the
-// terms of the GNU General Public License as published by the Free Software
-// Foundation, either version 3 of the License, or any later version.
-//
-// SVO is distributed in the hope that it will be useful, but WITHOUT ANY
-// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-// FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #ifdef __SSE2__
 #include <emmintrin.h>
@@ -27,6 +12,15 @@ namespace feature_alignment {
 
 #define SUBPIX_VERBOSE 0
 
+/*
+** parameters
+* cur_img: 当前图像
+* dir: 
+* 
+* 在matcher.cpp文件中的bool Matcher::findMatchDirect()函数中调用
+* 在matcher.cpp文件中的bool Matcher::findEpipolarMatchDirect()函数中的调用
+** function: 当特征点位于边上时的匹配算法
+*/
 bool align1D(
     const cv::Mat& cur_img,
     const Vector2f& dir,                  // direction in which the patch is allowed to move
@@ -42,10 +36,12 @@ bool align1D(
   bool converged=false;
 
   // compute derivative of template and prepare inverse compositional
+  // 计算模板的导数，准备逆compositional
   float __attribute__((__aligned__(16))) ref_patch_dv[patch_area];
   Matrix2f H; H.setZero();
 
   // compute gradient and hessian
+  // 计算梯度以及hessian矩阵
   const int ref_step = patch_size+2;
   float* it_dv = ref_patch_dv;
   for(int y=0; y<patch_size; ++y)
@@ -57,18 +53,20 @@ bool align1D(
       J[0] = 0.5*(dir[0]*(it[1] - it[-1]) + dir[1]*(it[ref_step] - it[-ref_step]));
       J[1] = 1;
       *it_dv = J[0];
-      H += J*J.transpose();
+      H += J*J.transpose(); // 转置
     }
   }
   h_inv = 1.0/H(0,0)*patch_size*patch_size;
-  Matrix2f Hinv = H.inverse();
+  Matrix2f Hinv = H.inverse(); // 求逆矩阵
   float mean_diff = 0;
 
   // Compute pixel location in new image:
+  // 计算像素点在新图像中的位置，x、y坐标值
   float u = cur_px_estimate.x();
   float v = cur_px_estimate.y();
 
   // termination condition
+  // 结束条件
   const float min_update_squared = 0.03*0.03;
   const int cur_step = cur_img.step.p[0];
   float chi2 = 0;
@@ -84,6 +82,7 @@ bool align1D(
       return false;
 
     // compute interpolation weights
+	// 计算插值权重
     float subpix_x = u-u_r;
     float subpix_y = v-v_r;
     float wTL = (1.0-subpix_x)*(1.0-subpix_y);
@@ -92,6 +91,7 @@ bool align1D(
     float wBR = subpix_x * subpix_y;
 
     // loop through search_patch, interpolate
+	// 循环搜索，插值
     uint8_t* it_ref = ref_patch;
     float* it_ref_dv = ref_patch_dv;
     float new_chi2 = 0.0;
@@ -146,6 +146,14 @@ bool align1D(
   return converged;
 }
 
+/*
+** parameters
+* cur_img: 当前图像
+* ref_patch_with_border:
+* 在matcher.cpp文件中的bool Matcher::findMatchDirect()函数中调用
+* 在matcher.cpp文件中的bool Matcher::findEpipolarMatchDirect()函数中的调用
+** function: 当特征点位于角上时的匹配算法
+*/
 bool align2D(
     const cv::Mat& cur_img,
     uint8_t* ref_patch_with_border,
@@ -317,16 +325,19 @@ bool align2D_SSE2(
   }
 
   // Compute pixel location in new image:
+  // 计算像素在新图像中的位置
   float u = cur_px_estimate.x();
   float v = cur_px_estimate.y();
 
   // termination condition
+  // 结束条件
   const float min_update_squared = 0.03*0.03;
   const int cur_step = cur_img.step.p[0];
   const float Dinv = 1.0f/(A11*A22 - A12*A12); // we are missing an extra factor 16
   float chi2 = 0;
   float update_u = 0, update_v = 0;
 
+  // 迭代
   for(int iter = 0; iter<n_iter; ++iter)
   {
     int u_r = floor(u);
@@ -445,6 +456,12 @@ bool align2D_SSE2(
   return converged;
 }
 
+/*
+** parameters
+* 
+* 在本文件中的bool align2D()函数中调用
+** function: 具体功能未知？？？
+*/
 bool align2D_NEON (
     const cv::Mat& cur_img,
     uint8_t* ref_patch_with_border,
@@ -463,6 +480,7 @@ bool align2D_NEON (
   int16_t __attribute__((__aligned__(16))) ref_patch_dy[patch_area];
   
   // compute gradient and hessian
+  // 计算梯度以及hessian矩阵
   const int ref_step = patch_size+2;
   int16_t* it_dx = ref_patch_dx;
   int16_t* it_dy = ref_patch_dy;

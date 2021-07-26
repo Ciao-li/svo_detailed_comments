@@ -1,19 +1,7 @@
-// This file is part of SVO - Semi-direct Visual Odometry.
-//
-// Copyright (C) 2014 Christian Forster <forster at ifi dot uzh dot ch>
-// (Robotics and Perception Group, University of Zurich, Switzerland).
-//
-// SVO is free software: you can redistribute it and/or modify it under the
-// terms of the GNU General Public License as published by the Free Software
-// Foundation, either version 3 of the License, or any later version.
-//
-// SVO is distributed in the hope that it will be useful, but WITHOUT ANY
-// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-// FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+/*
+** 像素深度估计（基于概率）
+*/
 #ifndef SVO_DEPTH_FILTER_H_
 #define SVO_DEPTH_FILTER_H_
 
@@ -40,10 +28,10 @@ struct Seed
   static int seed_counter;
   int batch_id;                //!< Batch id is the id of the keyframe for which the seed was created.
   int id;                      //!< Seed ID, only used for visualization.
-  Feature* ftr;                //!< Feature in the keyframe for which the depth should be computed.
-  float a;                     //!< a of Beta distribution: When high, probability of inlier is large.
-  float b;                     //!< b of Beta distribution: When high, probability of outlier is large.
-  float mu;                    //!< Mean of normal distribution.
+  Feature* ftr;                //!< Feature in the keyframe for which the depth should be computed. 关键帧中应该被估计深度的特征点
+  float a;                     //!< a of Beta distribution: When high, probability of inlier is large. β分布的a值：a越高时，正确点概率大
+  float b;                     //!< b of Beta distribution: When high, probability of outlier is large. β分布的b值：b越高时，错误点概率大
+  float mu;                    //!< Mean of normal distribution. 正态分布均值
   float z_range;               //!< Max range of the possible depth.
   float sigma2;                //!< Variance of normal distribution.
   Matrix2d patch_cov;          //!< Patch covariance in reference image.
@@ -73,7 +61,7 @@ public:
     bool use_photometric_disparity_error;       //!< use photometric disparity error instead of 1px error in tau computation.
     int max_n_kfs;                              //!< maximum number of keyframes for which we maintain seeds.
     double sigma_i_sq;                          //!< image noise.
-    double seed_convergence_sigma2_thresh;      //!< threshold on depth uncertainty for convergence.
+    double seed_convergence_sigma2_thresh;      //!< threshold on depth uncertainty for convergence.深度不确定的阈值，用于收敛性判断
     Options()
     : check_ftr_angle(false),
       epi_search_1d(false),
@@ -98,9 +86,11 @@ public:
   void stopThread();
 
   /// Add frame to the queue to be processed.
+  // 添加新帧进入深度滤波器的待处理队列中
   void addFrame(FramePtr frame);
 
   /// Add new keyframe to the queue
+  // 向队列中添加新的关键帧
   void addKeyframe(FramePtr frame, double depth_mean, double depth_min);
 
   /// Remove all seeds which are initialized from the specified keyframe. This
@@ -122,12 +112,14 @@ public:
   std::list<Seed>& getSeeds() { return seeds_; }
 
   /// Bayes update of the seed, x is the measurement, tau2 the measurement uncertainty
+  // 贝叶斯更新种子，x是测量值，tau2是测量的不确定性
   static void updateSeed(
       const float x,
       const float tau2,
       Seed* seed);
 
   /// Compute the uncertainty of the measurement.
+  // 计算测量的不确定性
   static double computeTau(
       const SE3& T_ref_cur,
       const Vector3d& f,
@@ -140,8 +132,9 @@ protected:
   std::list<Seed> seeds_;
   boost::mutex seeds_mut_;
   bool seeds_updating_halt_;            //!< Set this value to true when seeds updating should be interrupted.
+										// 当种子更新应中断时，将此值设置为true。
   boost::thread* thread_;
-  std::queue<FramePtr> frame_queue_;
+  std::queue<FramePtr> frame_queue_;	// 待处理的帧队列
   boost::mutex frame_queue_mut_;
   boost::condition_variable frame_queue_cond_;
   FramePtr new_keyframe_;               //!< Next keyframe to extract new seeds.
@@ -155,6 +148,7 @@ protected:
   void initializeSeeds(FramePtr frame);
 
   /// Update all seeds with a new measurement frame.
+  // 使用新的输入帧更新所有种子。什么种子？？？
   virtual void updateSeeds(FramePtr frame);
 
   /// When a new keyframe arrives, the frame queue should be cleared.

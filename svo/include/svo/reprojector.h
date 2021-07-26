@@ -1,19 +1,7 @@
-// This file is part of SVO - Semi-direct Visual Odometry.
-//
-// Copyright (C) 2014 Christian Forster <forster at ifi dot uzh dot ch>
-// (Robotics and Perception Group, University of Zurich, Switzerland).
-//
-// SVO is free software: you can redistribute it and/or modify it under the
-// terms of the GNU General Public License as published by the Free Software
-// Foundation, either version 3 of the License, or any later version.
-//
-// SVO is distributed in the hope that it will be useful, but WITHOUT ANY
-// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-// FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+/*
+ ** 重投影
+*/
 #ifndef SVO_REPROJECTION_H_
 #define SVO_REPROJECTION_H_
 
@@ -41,16 +29,16 @@ public:
 
   /// Reprojector config parameters
   struct Options {
-    size_t max_n_kfs;   //!< max number of keyframes to reproject from
-    bool find_match_direct;
+    size_t max_n_kfs;   //!< max number of keyframes to reproject from， 用于重投影的关键帧的最大数目
+    bool find_match_direct; // ？？？
     Options()
     : max_n_kfs(10),
       find_match_direct(true)
     {}
   } options_;
 
-  size_t n_matches_;
-  size_t n_trials_;
+  size_t n_matches_; // 匹配点
+  size_t n_trials_; // 什么意思？？？
 
   Reprojector(vk::AbstractCamera* cam, Map& map);
 
@@ -58,31 +46,33 @@ public:
 
   /// Project points from the map into the image. First finds keyframes with
   /// overlapping field of view and projects only those map-points.
+  // 从地图向图像投影，首先查找具有重叠视野的关键帧，并仅投影这些关键帧的地图点
   void reprojectMap(
       FramePtr frame,
       std::vector< std::pair<FramePtr,std::size_t> >& overlap_kfs);
 
 private:
 
-  /// A candidate is a point that projects into the image plane and for which we
-  /// will search a maching feature in the image.
+  /// A candidate is a point that projects into the image plane and for which we will search a matching feature in the image.
+	// 候选点（Candidate）是投影到图像平面上的点，我们将搜索图像中对应的匹配特征。
   struct Candidate {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    Point* pt;       //!< 3D point.
-    Vector2d px;     //!< projected 2D pixel location.
+    Point* pt;       //!< 3D point. 空间点
+    Vector2d px;     //!< projected 2D pixel location. 投影点坐标
     Candidate(Point* pt, Vector2d& px) : pt(pt), px(px) {}
   };
-  typedef std::list<Candidate > Cell;
+  typedef std::list<Candidate > Cell; // Cell的数据类型是一系列候选点的链表
   typedef std::vector<Cell*> CandidateGrid;
 
   /// The grid stores a set of candidate matches. For every grid cell we try to find one match.
+  // 网格存储一组候选匹配项。对于每个网格单元，我们试图找到一个匹配项。
   struct Grid
   {
-    CandidateGrid cells;
-    vector<int> cell_order;
-    int cell_size;
-    int grid_n_cols;
-    int grid_n_rows;
+    CandidateGrid cells;// 当前图像的网格
+    vector<int> cell_order; // 网格索引
+    int cell_size;// 网格数量
+    int grid_n_cols;// 列
+    int grid_n_rows;// 行
   };
 
   Grid grid_;
