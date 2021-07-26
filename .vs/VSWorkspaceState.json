@@ -1,0 +1,13 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\svo",
+    "\\svo\\include",
+    "\\svo\\include\\svo",
+    "\\svo\\src",
+    "\\svo_ros：与ROS有关的程序，包括launch文件",
+    "\\svo_ros：与ROS有关的程序，包括launch文件\\src"
+  ],
+  "SelectedNode": "\\svo\\src\\frame.cpp",
+  "PreviewInSolutionExplorer": false
+}
